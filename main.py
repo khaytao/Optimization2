@@ -26,6 +26,13 @@ def show_image(x):
 #     return dx
 
 def get_dx(m, n, dtype='<f8'):
+    """
+    This function returns the Dx matrix such that Dx x is the column stack representation of the spacial derivative in the x direction.
+    :param m:
+    :param n:
+    :param dtype:
+    :return:
+    """
     # dx = np.zeros([m * n, m * n])
 
     j = 0
@@ -33,6 +40,7 @@ def get_dx(m, n, dtype='<f8'):
     rows = []
     cols = []
     while j + m < m * n:
+        # The j'th row of the dx is x_{j+m}-x{j} for j + m < m * n, and zeros otherwise
         data.append(-1)
         rows.append(j)
         cols.append(j)
@@ -42,7 +50,8 @@ def get_dx(m, n, dtype='<f8'):
         # dx[j, j] = -1
         # dx[j, j + m] = 1
         j += 1
-    dx = csr_array((data, (rows, cols)), shape=(m * n, m * n), dtype=dtype)
+    dx = csr_array((data, (rows, cols)), shape=(m * n, m * n),
+                   dtype=dtype)  # using a sparse array as that matrix can be quite large
     return dx
 
 
@@ -68,7 +77,8 @@ def get_dy(m, n, dtype='<f8'):
 
     j = 0
     while j // (m - 1) + j < m * n:
-        # for j in range(m*n):
+        # The j'th row of the dy is X_{index+1} - X{index}. the index is j shifted up by j // (m - 1),
+        # as this creates zero rows between changes in columns
         index = j // (m - 1) + j
         data.append(-1)
         rows.append(index)
@@ -91,7 +101,7 @@ if __name__ == '__main__':
     X3 = scipy.io.loadmat("X3.mat")["X3"]
     Y = scipy.io.loadmat("Y.mat")
 
-    X = X3 # Choose signal to analyze
+    X = X3  # Choose signal to analyze
     m, n = X.shape
     Dy = get_dy(m, n)
     Dx = get_dx(m, n)
@@ -99,7 +109,6 @@ if __name__ == '__main__':
     # x = np.arange(m * n)
     # dx = np.dot(Dx, x)
     # dy = np.dot(Dy, x)
-
 
     dx = Dx @ X.reshape([-1, 1])
     dy = Dy @ X.reshape([-1, 1])
