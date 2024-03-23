@@ -94,6 +94,51 @@ def get_dy(m, n, dtype='<f8'):
     dy = csr_array((data, (rows, cols)), shape=(m * n, m * n), dtype=dtype)
     return dy
 
+def question_13():
+    """
+    This function calculate the norm1 and norm2 of the data given in Question 13.
+    :return:
+    """
+    X = [_ for _ in range(-4, 5, 1)]
+    f_1_X = [0, 0, 0, 0, 0.5, 1, 1, 1, 1]
+    f_2_X = [0, 0.0025, 0.018, 0.1192, 0.5, 0.8808, 0.9820, 0.9975, 1]
+
+    # calculation of derivative using existing method
+    # getting dimensions
+    # m = n = int(np.sqrt(len(X)))
+    #
+    # Dx = get_dx(m, n)
+    # Dy = get_dy(m, n)
+    #
+    # f_1_DX = Dx @ f_1_X
+    # f_2_DX = Dx @ f_2_X
+    # f_1_Dy = Dy @ f_1_X
+    # f_2_Dy = Dy @ f_2_X
+
+    # calculate derivative using list
+    f_1_DX = [x2 - x1 for x1, x2 in zip(f_1_X[:-1], f_1_X[1:])]
+    f_2_DX = [x2 - x1 for x1, x2 in zip(f_2_X[:-1], f_2_X[1:])]
+
+    # compute norm 1
+    f_1_DX_norm1 = np.linalg.norm(f_1_DX, ord=1)
+    f_2_DX_norm1 = np.linalg.norm(f_2_DX, ord=1)
+
+    # compute norm 2
+    f_1_DX_norm2 = np.linalg.norm(f_1_DX, ord=2)
+    f_2_DX_norm2 = np.linalg.norm(f_2_DX, ord=2)
+
+    print("f_1_DX:")
+    print(f_1_DX)
+    print("f_2_DX:")
+    print(f_2_DX)
+
+    print(f" The norm 1 of f_1 is: {f_1_DX_norm1}")
+    print(f" The norm 1 of f_2 is: {f_2_DX_norm1}")
+    print(f" The norm 2 of f_1 is: {f_1_DX_norm2}")
+    print(f" The norm 2 of f_2 is: {f_2_DX_norm2}")
+
+
+
 
 if __name__ == '__main__':
     X1 = scipy.io.loadmat("X1.mat")["X1"]
