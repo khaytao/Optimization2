@@ -2,7 +2,12 @@ import scipy
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.sparse import csr_array
-
+import sympy as sp
+import math
+# todo these are python implementations of the ex, for debugging
+from scipy.sparse.linalg import cg
+from scipy.optimize import line_search
+from tqdm import tqdm
 
 def show_image(x):
     plt.figure()
@@ -94,6 +99,76 @@ def get_dy(m, n, dtype='<f8'):
     dy = csr_array((data, (rows, cols)), shape=(m * n, m * n), dtype=dtype)
     return dy
 
+err_values = []
+def cgls(A, L, y, lamda, k_max, tolerance, m, n):
+    #x = np.random.rand(m * n)  # todo think about different x0
+    x = np.zeros(m * n)  # todo think about different x0
+    y_padded = np.concatenate([y, np.zeros(2*m * n)])
+    B = np.vstack((A, np.sqrt(lamda) * L))
+    grad = B.T @ (B @ x - y_padded)
+    g2_new = grad @ grad
+    d = -grad
+    # k = 0
+    for k in tqdm(range(k_max)):
+    # while True:
+    #     k += 1
+        g2_old = g2_new
+        # get step size
+        ak = g2_old / (2 * d @ B.T @ B @ d)  # todo closed form step size, doesn't fit into the 1 matrix multiplication restriction
+        # evaluate x
+        x = x + ak * d
+        # evaluate distance from solution
+        error = np.linalg.norm(A @ x - y)
+        err_values.append(error)
+        if error < tolerance: #todo use formula for better evaluation
+            return x, k
+
+        grad = B.T @ (B @ x - y_padded)
+        g2_new = grad @ grad
+        beta = g2_new / g2_old
+        d = -grad + beta * d
+    return x, k_max
+
+def question_3():
+    X1 = scipy.io.loadmat("X1.mat")["X1"]
+    X2 = scipy.io.loadmat("X2.mat")["X2"]
+    X3 = scipy.io.loadmat("X3.mat")["X3"]
+
+    X = X3  # Choose signal to analyze
+    m, n = X.shape
+    Dy = get_dy(m, n)
+    Dx = get_dx(m, n)
+
+    # x = np.arange(m * n)
+    # dx = np.dot(Dx, x)
+    # dy = np.dot(Dy, x)
+
+    dx = Dx @ X.reshape([-1, 1])
+    dy = Dy @ X.reshape([-1, 1])
+
+    gradient_amplitude = np.sqrt(dx ** 2 + dy ** 2)
+
+    fig, axs = plt.subplots(2, 2)
+
+    axs[0, 0].imshow(X, cmap="Grays")
+    axs[0, 0].set_title('Source Signal')
+    axs[0, 0].axis('off')  # Remove axis ticks and labels
+
+    axs[0, 1].imshow(dx.reshape([m, n]), cmap="Grays")
+    axs[0, 1].set_title('x-direction partial derivative')
+    axs[0, 1].axis('off')
+
+    axs[1, 0].imshow(dy.reshape([m, n]), cmap="Grays")
+    axs[1, 0].set_title('y-direction partial derivative')
+    axs[1, 0].axis('off')
+
+    axs[1, 1].imshow(gradient_amplitude.reshape([m, n]), cmap="Grays")
+    axs[1, 1].set_title('gradient_amplitude')
+    axs[1, 1].axis('off')
+
+    plt.show()
+
+
 def question_13():
     """
     This function calculate the norm1 and norm2 of the data given in Question 13.
@@ -138,44 +213,53 @@ def question_13():
     print(f" The norm 2 of f_2 is: {f_2_DX_norm2}")
 
 
+def get_A_toyExample():
+    values = []
+    rows = []
+    cols = []
+    delta_x = [(1, 1), (1, 6), (1, 11), (1, 16), (1, 21), (3, 2), (3, 7), (3, 12), (3, 17), (3, 22), (4, 4), (4, 9),
+               (4, 14), (4, 19), (4, 24)]
+    diag = [
+        (2, 2), (2, 8), (2, 14), (2, 20),
+        (5, 5), (5, 9), (5, 13), (5, 17), (5, 21),
+        (6, 4), (6, 10),
+        (8, 2), (8, 8), (8, 14), (8, 20)
+    ]
+    delta_y = [
+        (7, 16), (7, 17), (7, 18), (7, 19), (7, 20)
+    ]
+
+    for pair in delta_x:
+        values.append(1)
+        rows.append(pair[0] - 1)
+        cols.append(pair[1] - 1)
+    for pair in delta_y:
+        values.append(1)
+        rows.append(pair[0] - 1)
+        cols.append(pair[1] - 1)
+    for pair in diag:
+        values.append(math.sqrt(2))
+        rows.append(pair[0] - 1)
+        cols.append(pair[1] - 1)
+    return csr_array((values, (rows, cols)), shape=(8, 25), dtype=np.float64)
+
+
+def get_y_toy_problem():
+    Y = scipy.io.loadmat("Y.mat")["Y"]
+    y_flat = np.array(Y.todense().flatten())
+    return y_flat[
+        y_flat != 0].flatten()  # we have defined A in a way that y is ordered correctly. All that's needed is to flatten and take the nonzero elements
 
 
 if __name__ == '__main__':
-    X1 = scipy.io.loadmat("X1.mat")["X1"]
-    X2 = scipy.io.loadmat("X2.mat")["X2"]
-    X3 = scipy.io.loadmat("X3.mat")["X3"]
-    Y = scipy.io.loadmat("Y.mat")
-
-    X = X3  # Choose signal to analyze
-    m, n = X.shape
-    Dy = get_dy(m, n)
-    Dx = get_dx(m, n)
-
-    # x = np.arange(m * n)
-    # dx = np.dot(Dx, x)
-    # dy = np.dot(Dy, x)
-
-    dx = Dx @ X.reshape([-1, 1])
-    dy = Dy @ X.reshape([-1, 1])
-
-    gradient_amplitude = np.sqrt(dx ** 2 + dy ** 2)
-
-    fig, axs = plt.subplots(2, 2)
-
-    axs[0, 0].imshow(X, cmap="Grays")
-    axs[0, 0].set_title('Source Signal')
-    axs[0, 0].axis('off')  # Remove axis ticks and labels
-
-    axs[0, 1].imshow(dx.reshape([m, n]), cmap="Grays")
-    axs[0, 1].set_title('x-direction partial derivative')
-    axs[0, 1].axis('off')
-
-    axs[1, 0].imshow(dy.reshape([m, n]), cmap="Grays")
-    axs[1, 0].set_title('y-direction partial derivative')
-    axs[1, 0].axis('off')
-
-    axs[1, 1].imshow(gradient_amplitude.reshape([m, n]), cmap="Grays")
-    axs[1, 1].set_title('gradient_amplitude')
-    axs[1, 1].axis('off')
-
-    plt.show()
+    A = get_A_toyExample().todense()
+    L = np.concatenate([get_dx(5, 5).todense(), get_dy(5, 5).todense()])
+    y = get_y_toy_problem()
+    l = 10 ** -5
+    I_max = 100
+    tol = 0.001
+    x, k = cgls(A, L, y, l, I_max, tol, 5, 5)
+    y_padded = np.concatenate([y, np.zeros(50)])
+    B = np.vstack((A, np.sqrt(l) * L))
+    Q = 2 * B.T @ B
+    x_hat, exit_code = cg(B.T @ B, B.T @ y_padded, atol=1e-5)
