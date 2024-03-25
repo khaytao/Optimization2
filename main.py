@@ -68,14 +68,6 @@ def get_dy(m, n, dtype='<f8'):
     :param n:
     :return:
     """
-    # dy = np.zeros([m * n, m * n])
-    # for j in range(n):
-    #     for i in range(1, m):  # iterate over the y direction
-    #         dy[j * m + i - 1, j * m + i - 1] = -1
-    #         dy[j * m + i - 1, j * m + i] = 1
-    # return dy
-
-    # dy = np.zeros([m * n, m * n])
 
     data = []
     rows = []
@@ -101,45 +93,8 @@ def get_dy(m, n, dtype='<f8'):
     return dy
 
 
-err_values = []
-
 
 def cgls(A, L, y, lamda, k_max, tolerance, m, n):
-    # x = np.random.rand(m * n)  # todo think about different x0
-    x = np.zeros(m * n)  # todo think about different x0
-    y_padded = np.concatenate([y, np.zeros(2 * m * n)])
-    B = np.vstack((A, np.sqrt(lamda) * L))
-    grad = B.T @ (B @ x - y_padded)
-    g2_new = grad @ grad
-    d = -grad
-    # k = 0
-
-    for k in tqdm(range(k_max)):
-        g2_old = g2_new
-        # get step size
-        ak = g2_old / (
-                d @ B.T @ B @ d)  # todo closed form step size, doesn't fit into the 1 matrix multiplication restriction
-        # evaluate x
-        x_old = x
-        x = x + ak * d
-        # evaluate distance from solution
-        # error = np.linalg.norm(A @ x - y)
-
-        grad = B.T @ (B @ x - y_padded)
-        g2_new = grad @ grad
-        beta = g2_new / g2_old
-        d = -grad + beta * d
-
-        # error = np.linalg.norm(x - x_old)
-        error = np.linalg.norm(grad)
-        err_values.append(error)
-        if error < tolerance:  # todo use formula for better evaluation
-            return x, k
-
-    return x, k_max
-
-
-def cgls2(A, L, y, lamda, k_max, tolerance, m, n):
     err_values = []
     # x = np.random.rand(m * n)  # todo think about different x0
     x = np.zeros(m * n)  # todo think about different x0
@@ -155,22 +110,22 @@ def cgls2(A, L, y, lamda, k_max, tolerance, m, n):
         Bd = B @ d
         g2_old = g2_new
         # calculate step size
-        ak = g2_old / np.linalg.norm(Bd)
+        ak = g2_old / (np.linalg.norm(Bd, ord=2)**2)
         # calculate new x
         x = x + ak * d
-        # calculate decent direction
+        # calculate decent direction - new point
         sk = sk + ak * Bd
         grad = B.T @ sk
 
-        diff = np.linalg.norm(grad)
+        diff = np.linalg.norm(grad, ord=2)
         err_values.append(diff)
         if diff < tolerance:
-            return x, k
+            return x, k, err_values
 
         g2_new = grad @ grad
         beta = g2_new / g2_old
         d = -grad + beta * d
-    return x, k_max
+    return x, k_max, err_values
 
 
 def question_3():
@@ -294,19 +249,19 @@ def question_15(X, A, Y, alpha: float = 1/2, num_iter: int = 100000, eps=1e-10, 
         # evaluate x
         X = X + ak * d
         # evaluate distance from solution
-        error = np.linalg.norm(A @ x - y)
+        error = np.linalg.norm(A @ X - y)
         err.append(error)
         if len(err) > 2:
             if (error - err[-2]) < tolerance:  # todo use formula for better evaluation
-                return x, num_iter-k, err
+                return X, num_iter-k, err
 
-        grad = B.T @ (B @ x - y_padded)
+        grad = B.T @ (B @ X - y_padded)
         g2_new = grad @ grad
         beta = g2_new / g2_old
         d = -grad + beta * d
         k = k-1
 
-    return x, num_iter, err
+    return X, num_iter, err
 
 def get_A_toyExample():
     values = []
@@ -352,24 +307,31 @@ if __name__ == '__main__':
     y = get_y_toy_problem()
     l = 10 ** -5
     I_max = 100
-    tol = 10 ** -6
-    x, k = cgls2(A, L, y, l, I_max, tol, 5, 5)
-    #x1, k = cgls(A, L, y, l, I_max, tol, 5, 5)
+    tol = 1e-8
+    # x, k = cgls2(A, L, y, l, I_max, tol, 5, 5)
+    x1, k, q10_err = cgls(A, L, y, l, I_max, tol, 5, 5)
     y_padded = np.concatenate([y, np.zeros(50)])
     B = np.vstack((A, np.sqrt(l) * L))
     Q = 2 * B.T @ B
     x_hat, exit_code = cg(B.T @ B, B.T @ y_padded, atol=1e-5)  # scipy implementation for reference
-    show_image(x.reshape([5, 5]))
+    show_image(x1.reshape([5, 5]))
+
+    print(f"number of iter: {k}.")
+    print("Optimal X:")
+    print(x1)
+    print("Last 10 errors:")
+    print(q10_err[-10:])
+
 
     plt.figure()
-    plt.plot(err_values)
+    plt.plot(q10_err[-15:])
     plt.show()
 
-    #15
-    X_15 = np.zeros((5, 5))
-    q15_opt_x, q15_iter, q15_err = question_15(X_15, A, y)
-    print(f"number of iter: {q15_iter}.")
-    print("Optimal X:")
-    print(q15_opt_x)
-    print("Last 10 errors:")
-    print(q15_err[-10:])
+    # #15
+    # X_15 = np.zeros((5, 5))
+    # q15_opt_x, q15_iter, q15_err = question_15(X_15, A, y)
+    # print(f"number of iter: {q15_iter}.")
+    # print("Optimal X:")
+    # print(q15_opt_x)
+    # print("Last 10 errors:")
+    # print(q15_err[-10:])
