@@ -183,35 +183,86 @@ def question_13():
     # m = n = int(np.sqrt(len(X)))
     #
     # Dx = get_dx(m, n)
-    # Dy = get_dy(m, n)
+    Dy = get_dy(len(X), 1)
     #
-    # f_1_DX = Dx @ f_1_X
-    # f_2_DX = Dx @ f_2_X
-    # f_1_Dy = Dy @ f_1_X
-    # f_2_Dy = Dy @ f_2_X
+    # f_1_Dx = Dx @ f_1_X
+    # f_2_Dx = Dx @ f_2_X
+    df_1_Dy = Dy @ f_1_X
+    df_2_Dy = Dy @ f_2_X
 
     # calculate derivative using list
-    f_1_DX = [x2 - x1 for x1, x2 in zip(f_1_X[:-1], f_1_X[1:])]
-    f_2_DX = [x2 - x1 for x1, x2 in zip(f_2_X[:-1], f_2_X[1:])]
+    # df_1_Dy = [x2 - x1 for x1, x2 in zip(f_1_X[:-1], f_1_X[1:])]
+    # df_2_Dy = [x2 - x1 for x1, x2 in zip(f_2_X[:-1], f_2_X[1:])]
 
     # compute norm 1
-    f_1_DX_norm1 = np.linalg.norm(f_1_DX, ord=1)
-    f_2_DX_norm1 = np.linalg.norm(f_2_DX, ord=1)
+    f_1_Dy_norm1 = np.linalg.norm(df_1_Dy, ord=1)
+    f_2_Dy_norm1 = np.linalg.norm(df_2_Dy, ord=1)
 
     # compute norm 2
-    f_1_DX_norm2 = np.linalg.norm(f_1_DX, ord=2)
-    f_2_DX_norm2 = np.linalg.norm(f_2_DX, ord=2)
+    f_1_Dy_norm2 = np.linalg.norm(df_1_Dy, ord=2)
+    f_2_Dy_norm2 = np.linalg.norm(df_2_Dy, ord=2)
 
-    print("f_1_DX:")
-    print(f_1_DX)
+    # # printing df_Dx
+    # print("df_1_Dx:")
+    # print(df_1_Dx)
+    # print("f_2_Dx:")
+    # print(df_2_Dx)
+
+    # printing df_dy
+    print("df_1_DX:")
+    print(df_1_Dy)
     print("f_2_DX:")
-    print(f_2_DX)
+    print(df_2_Dy)
 
-    print(f" The norm 1 of f_1 is: {f_1_DX_norm1}")
-    print(f" The norm 1 of f_2 is: {f_2_DX_norm1}")
-    print(f" The norm 2 of f_1 is: {f_1_DX_norm2}")
-    print(f" The norm 2 of f_2 is: {f_2_DX_norm2}")
+    print(f" The norm 1 of f_1 is: {f_1_Dy_norm1}")
+    print(f" The norm 1 of f_2 is: {f_2_Dy_norm1}")
+    print(f" The norm 2 of f_1 is: {f_1_Dy_norm2}")
+    print(f" The norm 2 of f_2 is: {f_2_Dy_norm2}")
 
+
+def question_15(X, A, Y, alpha: float = 1/2, num_iter: int = 100000, eps=1e-10, tolerance=1e-6, dtype='<f8'):
+
+    # if X is None:
+    #     X = np.zeros(m * n)  # todo think about different x0
+    m, n = X.shape
+    L = get_dy(m, n)
+
+    idx = [_ for _ in range(m*n)]
+
+    k = num_iter
+    err = []
+
+    X = np.squeeze(X.reshape([-1, 1]))
+    while k:
+        W_vals = 1 / (np.absolute(L.T @ X) + eps)
+        W = csr_array((W_vals, (idx, idx)), shape=(m * n, m * n), dtype=dtype)
+
+        y_padded = np.concatenate([Y, np.zeros(m * n)])
+        B = np.vstack((A, np.sqrt(alpha) * (W @ L).toarray()))
+        grad = B.T @ (B @ X - y_padded)
+        g2_new = grad @ grad
+        d = -grad
+
+        g2_old = g2_new
+        # get step size
+        ak = g2_old / (
+                2 * d @ B.T @ B @ d)  # todo closed form step size, doesn't fit into the 1 matrix multiplication restriction
+        # evaluate x
+        X = X + ak * d
+        # evaluate distance from solution
+        error = np.linalg.norm(A @ x - y)
+        err.append(error)
+        if len(err) > 2:
+            if (error - err[-2]) < tolerance:  # todo use formula for better evaluation
+                return x, num_iter-k, err
+
+        grad = B.T @ (B @ x - y_padded)
+        g2_new = grad @ grad
+        beta = g2_new / g2_old
+        d = -grad + beta * d
+        k = k-1
+
+    return x, num_iter, err
 
 def get_A_toyExample():
     values = []
@@ -263,3 +314,52 @@ if __name__ == '__main__':
     B = np.vstack((A, np.sqrt(l) * L))
     Q = 2 * B.T @ B
     x_hat, exit_code = cg(B.T @ B, B.T @ y_padded, atol=1e-5)
+
+
+    X1 = scipy.io.loadmat("X1.mat")["X1"]
+    X2 = scipy.io.loadmat("X2.mat")["X2"]
+    X3 = scipy.io.loadmat("X3.mat")["X3"]
+    Y = scipy.io.loadmat("Y.mat")
+
+    X = X2  # Choose signal to analyze
+    m, n = X.shape
+    Dy = get_dy(m, n)
+    Dx = get_dx(m, n)
+
+    # x = np.arange(m * n)
+    # dx = np.dot(Dx, x)
+    # dy = np.dot(Dy, x)
+
+    dx = Dx @ X.reshape([-1, 1])
+    dy = Dy @ X.reshape([-1, 1])
+
+    gradient_amplitude = np.sqrt(dx ** 2 + dy ** 2)
+
+    fig, axs = plt.subplots(2, 2)
+
+    axs[0, 0].imshow(X, cmap="Grays")
+    axs[0, 0].set_title('Source Signal')
+    axs[0, 0].axis('off')  # Remove axis ticks and labels
+
+    axs[0, 1].imshow(dx.reshape([m, n]), cmap="Grays")
+    axs[0, 1].set_title('x-direction partial derivative')
+    axs[0, 1].axis('off')
+
+    axs[1, 0].imshow(dy.reshape([m, n]), cmap="Grays")
+    axs[1, 0].set_title('y-direction partial derivative')
+    axs[1, 0].axis('off')
+
+    axs[1, 1].imshow(gradient_amplitude.reshape([m, n]), cmap="Grays")
+    axs[1, 1].set_title('gradient_amplitude')
+    axs[1, 1].axis('off')
+
+    plt.show()
+
+    X_15 = np.zeros((5, 5))
+    q15_opt_x, q15_iter, q15_err = question_15(X_15, A, y)
+    print(f"number of iter: {q15_iter}.")
+    print("Optimal X:")
+    print(q15_opt_x)
+    print("Last 10 errors:")
+    print(q15_err[-10:])
+
