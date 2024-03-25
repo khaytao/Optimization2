@@ -140,6 +140,7 @@ def cgls(A, L, y, lamda, k_max, tolerance, m, n):
 
 
 def cgls2(A, L, y, lamda, k_max, tolerance, m, n):
+    err_values = []
     # x = np.random.rand(m * n)  # todo think about different x0
     x = np.zeros(m * n)  # todo think about different x0
     y_padded = np.concatenate([y, np.zeros(2 * m * n)])
@@ -226,35 +227,86 @@ def question_13():
     # m = n = int(np.sqrt(len(X)))
     #
     # Dx = get_dx(m, n)
-    # Dy = get_dy(m, n)
+    Dy = get_dy(len(X), 1)
     #
-    # f_1_DX = Dx @ f_1_X
-    # f_2_DX = Dx @ f_2_X
-    # f_1_Dy = Dy @ f_1_X
-    # f_2_Dy = Dy @ f_2_X
+    # f_1_Dx = Dx @ f_1_X
+    # f_2_Dx = Dx @ f_2_X
+    df_1_Dy = Dy @ f_1_X
+    df_2_Dy = Dy @ f_2_X
 
     # calculate derivative using list
-    f_1_DX = [x2 - x1 for x1, x2 in zip(f_1_X[:-1], f_1_X[1:])]
-    f_2_DX = [x2 - x1 for x1, x2 in zip(f_2_X[:-1], f_2_X[1:])]
+    # df_1_Dy = [x2 - x1 for x1, x2 in zip(f_1_X[:-1], f_1_X[1:])]
+    # df_2_Dy = [x2 - x1 for x1, x2 in zip(f_2_X[:-1], f_2_X[1:])]
 
     # compute norm 1
-    f_1_DX_norm1 = np.linalg.norm(f_1_DX, ord=1)
-    f_2_DX_norm1 = np.linalg.norm(f_2_DX, ord=1)
+    f_1_Dy_norm1 = np.linalg.norm(df_1_Dy, ord=1)
+    f_2_Dy_norm1 = np.linalg.norm(df_2_Dy, ord=1)
 
     # compute norm 2
-    f_1_DX_norm2 = np.linalg.norm(f_1_DX, ord=2)
-    f_2_DX_norm2 = np.linalg.norm(f_2_DX, ord=2)
+    f_1_Dy_norm2 = np.linalg.norm(df_1_Dy, ord=2)
+    f_2_Dy_norm2 = np.linalg.norm(df_2_Dy, ord=2)
 
-    print("f_1_DX:")
-    print(f_1_DX)
+    # # printing df_Dx
+    # print("df_1_Dx:")
+    # print(df_1_Dx)
+    # print("f_2_Dx:")
+    # print(df_2_Dx)
+
+    # printing df_dy
+    print("df_1_DX:")
+    print(df_1_Dy)
     print("f_2_DX:")
-    print(f_2_DX)
+    print(df_2_Dy)
 
-    print(f" The norm 1 of f_1 is: {f_1_DX_norm1}")
-    print(f" The norm 1 of f_2 is: {f_2_DX_norm1}")
-    print(f" The norm 2 of f_1 is: {f_1_DX_norm2}")
-    print(f" The norm 2 of f_2 is: {f_2_DX_norm2}")
+    print(f" The norm 1 of f_1 is: {f_1_Dy_norm1}")
+    print(f" The norm 1 of f_2 is: {f_2_Dy_norm1}")
+    print(f" The norm 2 of f_1 is: {f_1_Dy_norm2}")
+    print(f" The norm 2 of f_2 is: {f_2_Dy_norm2}")
 
+
+def question_15(X, A, Y, alpha: float = 1/2, num_iter: int = 100000, eps=1e-10, tolerance=1e-6, dtype='<f8'):
+
+    # if X is None:
+    #     X = np.zeros(m * n)  # todo think about different x0
+    m, n = X.shape
+    L = get_dy(m, n)
+
+    idx = [_ for _ in range(m*n)]
+
+    k = num_iter
+    err = []
+
+    X = np.squeeze(X.reshape([-1, 1]))
+    while k:
+        W_vals = 1 / (np.absolute(L.T @ X) + eps)
+        W = csr_array((W_vals, (idx, idx)), shape=(m * n, m * n), dtype=dtype)
+
+        y_padded = np.concatenate([Y, np.zeros(m * n)])
+        B = np.vstack((A, np.sqrt(alpha) * (W @ L).toarray()))
+        grad = B.T @ (B @ X - y_padded)
+        g2_new = grad @ grad
+        d = -grad
+
+        g2_old = g2_new
+        # get step size
+        ak = g2_old / (
+                2 * d @ B.T @ B @ d)  # todo closed form step size, doesn't fit into the 1 matrix multiplication restriction
+        # evaluate x
+        X = X + ak * d
+        # evaluate distance from solution
+        error = np.linalg.norm(A @ x - y)
+        err.append(error)
+        if len(err) > 2:
+            if (error - err[-2]) < tolerance:  # todo use formula for better evaluation
+                return x, num_iter-k, err
+
+        grad = B.T @ (B @ x - y_padded)
+        g2_new = grad @ grad
+        beta = g2_new / g2_old
+        d = -grad + beta * d
+        k = k-1
+
+    return x, num_iter, err
 
 def get_A_toyExample():
     values = []
@@ -312,3 +364,12 @@ if __name__ == '__main__':
     plt.figure()
     plt.plot(err_values)
     plt.show()
+
+    #15
+    X_15 = np.zeros((5, 5))
+    q15_opt_x, q15_iter, q15_err = question_15(X_15, A, y)
+    print(f"number of iter: {q15_iter}.")
+    print("Optimal X:")
+    print(q15_opt_x)
+    print("Last 10 errors:")
+    print(q15_err[-10:])
