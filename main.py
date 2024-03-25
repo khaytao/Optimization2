@@ -16,22 +16,7 @@ def show_image(x):
     plt.show()
 
 
-# def get_dx(m, n):
-#     """
-#     this function returns the dx matrix such that Dx x is the column stack representation of the spacial derivative in the x direction
-#     :param m:
-#     :param n:
-#     :return:
-#     """
-#     dx = np.zeros([m * n, m * n])
-#     for i in range(m):
-#         for j in range(n):
-#
-#             dx[i*n+i, j] = -1
-#             dx[j*(n-1), j + m] = 1
-#     return dx
-
-def get_dx(m, n, dtype='<f8'):
+def get_dx(m, n, l=1, dtype='<f8'):
     """
     This function returns the Dx matrix such that Dx x is the column stack representation of the spacial derivative in the x direction.
     :param m:
@@ -53,15 +38,42 @@ def get_dx(m, n, dtype='<f8'):
         data.append(1)
         rows.append(j)
         cols.append(j + m)
-        # dx[j, j] = -1
-        # dx[j, j + m] = 1
         j += 1
     dx = csr_array((data, (rows, cols)), shape=(m * n, m * n),
                    dtype=dtype)  # using a sparse array as that matrix can be quite large
     return dx
 
 
-def get_dy(m, n, dtype='<f8'):
+def get_dx2(m, n, l=1, dtype='<f8'):
+    """
+    This function returns the Dx matrix such that Dx x is the column stack representation of the spacial derivative in the x direction.
+    :param m:
+    :param n:
+    :param dtype:
+    :return:
+    """
+
+    data = []
+    rows = []
+    cols = []
+    i = 0
+    while i < l:
+        j = 0
+        while j + m < m * n:
+            # The j'th row of the dx is x_{j+m}-x{j} for j + m < m * n, and zeros otherwise
+            data.append(-1)
+            rows.append(j + (i * m * n))
+            cols.append(j + (i * m * n))
+            data.append(1)
+            rows.append(j+ (i * m * n))
+            cols.append(j + m + (i * m * n))
+            j += 1
+        i += 1
+    dx = csr_array((data, (rows, cols)), shape=(m * n * l, m * n * l),
+                   dtype=dtype)  # using a sparse array as that matrix can be quite large
+    return dx
+
+def get_dy(m, n, l=1, dtype='<f8'):
     """
     this function returns the dy matrix such that Dy x is the column stack representation of the spacial derivative in the y direction
     :param m:
@@ -74,6 +86,7 @@ def get_dy(m, n, dtype='<f8'):
     cols = []
 
     j = 0
+
     while j // (m - 1) + j < m * n:
         # The j'th row of the dy is X_{index+1} - X{index}. the index is j shifted up by j // (m - 1),
         # as this creates zero rows between changes in columns
@@ -85,14 +98,43 @@ def get_dy(m, n, dtype='<f8'):
         data.append(1)
         rows.append(index)
         cols.append(index + 1)
-        # index = j //(m-1) + j
-        # dy[index, index] = -1
-        # dy[index, index + 1] = 1
         j += 1
     dy = csr_array((data, (rows, cols)), shape=(m * n, m * n), dtype=dtype)
     return dy
 
+def get_dy2(m, n, l=1, dtype='<f8'):
+    """
+    this function returns the dy matrix such that Dy x is the column stack representation of the spacial derivative in the y direction
+    :param m:
+    :param n:
+    :return:
+    """
 
+    data = []
+    rows = []
+    cols = []
+
+    i = 0
+    while i < l:
+        j = 0
+        while j // (m - 1) + j < m * n:
+            # The j'th row of the dy is X_{index+1} - X{index}. the index is j shifted up by j // (m - 1),
+            # as this creates zero rows between changes in columns
+            index = j // (m - 1) + j
+            data.append(-1)
+            rows.append(index + (i * m * n))
+            cols.append(index + (i * m * n))
+
+            data.append(1)
+            rows.append(index + (i * m * n))
+            cols.append(index + 1 + (i * m * n))
+            j += 1
+        i += 1
+    dy = csr_array((data, (rows, cols)), shape=(m * n * l, m * n * l), dtype=dtype)
+    return dy
+
+def get_dz(m, n, l=1, dtype='<f8'):
+    return get_dx2(m*n,l, 1)
 
 def cgls(A, L, y, lamda, k_max, tolerance, m, n):
     err_values = []
@@ -166,6 +208,8 @@ def question_3():
     axs[1, 1].axis('off')
 
     plt.show()
+
+def question_11():
 
 
 def question_13():
@@ -302,12 +346,13 @@ def get_y_toy_problem():
 
 
 if __name__ == '__main__':
+    get_dz(2,2,2)
     A = get_A_toyExample().todense()
     L = np.concatenate([get_dx(5, 5).todense(), get_dy(5, 5).todense()])
     y = get_y_toy_problem()
     l = 10 ** -5
     I_max = 100
-    tol = 1e-8
+    tol = 1e-7
     # x, k = cgls2(A, L, y, l, I_max, tol, 5, 5)
     x1, k, q10_err = cgls(A, L, y, l, I_max, tol, 5, 5)
     y_padded = np.concatenate([y, np.zeros(50)])
