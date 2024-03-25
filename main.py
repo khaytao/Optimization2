@@ -1,7 +1,7 @@
 import scipy
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.sparse import csr_array, csc_array
+from scipy.sparse import csr_array, csc_array, csr_matrix
 import sympy as sp
 import math
 # todo these are python implementations of the ex, for debugging
@@ -69,7 +69,9 @@ def get_dx2(m, n, l=1, dtype='<f8'):
             cols.append(j + m + (i * m * n))
             j += 1
         i += 1
-    dx = csr_array((data, (rows, cols)), shape=(m * n * l, m * n * l),
+    # dx = csr_array((data, (rows, cols)), shape=(m * n * l, m * n * l),
+    #                dtype=dtype)  # using a sparse array as that matrix can be quite large
+    dx = csr_matrix((data, (rows, cols)), shape=(m * n * l, m * n * l),
                    dtype=dtype)  # using a sparse array as that matrix can be quite large
     return dx
 
@@ -130,7 +132,8 @@ def get_dy2(m, n, l=1, dtype='<f8'):
             cols.append(index + 1 + (i * m * n))
             j += 1
         i += 1
-    dy = csr_array((data, (rows, cols)), shape=(m * n * l, m * n * l), dtype=dtype)
+    # dy = csr_array((data, (rows, cols)), shape=(m * n * l, m * n * l), dtype=dtype)
+    dy = csr_matrix((data, (rows, cols)), shape=(m * n * l, m * n * l), dtype=dtype)
     return dy
 
 def get_dz(m, n, l=1, dtype='<f8'):
@@ -211,7 +214,6 @@ def question_3():
 
     plt.show()
 
-
 def question_11():
     y = scipy.io.loadmat("Small/y.mat")["y"]
     A = scipy.io.loadmat("Small/A.mat")["A"]
@@ -230,7 +232,7 @@ def question_11():
     lam = 1e-5
     I_max = 100
 
-    x_opt, num_iter, err = cgls(A.tocsr(), np.squeeze(L), Y, lam, I_max, tol, m, n, l)
+    x_opt, num_iter, err = cgls(A.tocsr(), L, Y, lam, I_max, tol, m, n, l)
     x_opt_org = x_opt.reshape([m, n, l])
     for _ in range(m):
         show_image(x_opt_org[_])
@@ -373,7 +375,7 @@ def get_y_toy_problem():
 
 
 if __name__ == '__main__':
-    # question_11()
+    question_11()
     # A = get_A_toyExample().todense()
     # L = np.concatenate([get_dx(5, 5).todense(), get_dy(5, 5).todense()])
     # y = get_y_toy_problem()
@@ -399,11 +401,11 @@ if __name__ == '__main__':
     # plt.plot(q10_err[-15:])
     # plt.show()
 
-    #15
-    X_15 = np.zeros((5, 5))
-    q15_opt_x, q15_iter, q15_err = question_15()
-    print(f"number of iter: {q15_iter}.")
-    print("Optimal X:")
-    print(q15_opt_x)
-    print("Last 10 errors:")
-    print(q15_err[-10:])
+    # #15
+    # X_15 = np.zeros((5, 5))
+    # q15_opt_x, q15_iter, q15_err = question_15()
+    # print(f"number of iter: {q15_iter}.")
+    # print("Optimal X:")
+    # print(q15_opt_x)
+    # print("Last 10 errors:")
+    # print(q15_err[-10:])
