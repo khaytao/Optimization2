@@ -1,7 +1,7 @@
 import scipy
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.sparse import csr_array
+from scipy.sparse import csr_array, csc_array
 import sympy as sp
 import math
 # todo these are python implementations of the ex, for debugging
@@ -136,12 +136,14 @@ def get_dy2(m, n, l=1, dtype='<f8'):
 def get_dz(m, n, l=1, dtype='<f8'):
     return get_dx2(m*n,l, 1)
 
-def cgls(A, L, y, lamda, k_max, tolerance, m, n):
+
+def cgls(A, L, y, lamda=1e-5, k_max=300, tolerance=1e-6, m=1, n=1, l=1):
     err_values = []
+
     # x = np.random.rand(m * n)  # todo think about different x0
-    x = np.zeros(m * n)  # todo think about different x0
-    y_padded = np.concatenate([y, np.zeros(2 * m * n)])
-    B = np.vstack((A, np.sqrt(lamda) * L))  # Our matrix Q = B^T B
+    x = np.zeros(m * n * l * (L.size+1))  # todo think about different x0
+    y_padded = np.concatenate([y, np.zeros(m * n * l * L.size)])
+    B = np.vstack((A, np.sqrt(lamda) * L[0], np.sqrt(lamda) * L[1], np.sqrt(lamda) * L[2]))  # Our matrix Q = B^T B
     sk = B @ x - y_padded
     grad = B.T @ sk
     g2_new = grad @ grad # g2 is the power of the norm of the gradient
@@ -209,7 +211,29 @@ def question_3():
 
     plt.show()
 
+
 def question_11():
+    y = scipy.io.loadmat("Small/y.mat")["y"]
+    A = scipy.io.loadmat("Small/A.mat")["A"]
+
+    Y = np.squeeze(y)
+    x_dim = A.shape[1]
+    m = n = l = round(x_dim ** (1/3))
+
+    Dx = get_dx2(m, n, l)
+    Dy = get_dy2(m, n, l)
+    Dz = get_dz(m, n, l)
+
+    L = np.vstack((Dx, Dy, Dz))
+
+    tol = 1e-6
+    lam = 1e-5
+    I_max = 100
+
+    x_opt, num_iter, err = cgls(A.tocsr(), np.squeeze(L), Y, lam, I_max, tol, m, n, l)
+    x_opt_org = x_opt.reshape([m, n, l])
+    for _ in range(m):
+        show_image(x_opt_org[_])
 
 
 def question_13():
@@ -263,11 +287,14 @@ def question_13():
     print(f" The norm 2 of f_2 is: {f_2_Dy_norm2}")
 
 
-def question_15(X, A, Y, alpha: float = 1/2, num_iter: int = 100000, eps=1e-10, tolerance=1e-6, dtype='<f8'):
+def question_15(alpha: float = 1/2, num_iter: int = 1000, eps=1e-10, tolerance=1e-7, dtype='<f8'):
 
-    # if X is None:
-    #     X = np.zeros(m * n)  # todo think about different x0
-    m, n = X.shape
+    A = get_A_toyExample()
+    Y = get_y_toy_problem()
+
+    X = np.zeros(5 * 5)
+
+    m = n = 5
     L = get_dy(m, n)
 
     idx = [_ for _ in range(m*n)]
@@ -281,7 +308,7 @@ def question_15(X, A, Y, alpha: float = 1/2, num_iter: int = 100000, eps=1e-10, 
         W = csr_array((W_vals, (idx, idx)), shape=(m * n, m * n), dtype=dtype)
 
         y_padded = np.concatenate([Y, np.zeros(m * n)])
-        B = np.vstack((A, np.sqrt(alpha) * (W @ L).toarray()))
+        B = np.vstack((A.toarray(), np.sqrt(alpha) * (W @ L).toarray()))
         grad = B.T @ (B @ X - y_padded)
         g2_new = grad @ grad
         d = -grad
@@ -293,7 +320,7 @@ def question_15(X, A, Y, alpha: float = 1/2, num_iter: int = 100000, eps=1e-10, 
         # evaluate x
         X = X + ak * d
         # evaluate distance from solution
-        error = np.linalg.norm(A @ X - y)
+        error = np.linalg.norm(A @ X - Y)
         err.append(error)
         if len(err) > 2:
             if (error - err[-2]) < tolerance:  # todo use formula for better evaluation
@@ -346,37 +373,37 @@ def get_y_toy_problem():
 
 
 if __name__ == '__main__':
-    get_dz(2,2,2)
-    A = get_A_toyExample().todense()
-    L = np.concatenate([get_dx(5, 5).todense(), get_dy(5, 5).todense()])
-    y = get_y_toy_problem()
-    l = 10 ** -5
-    I_max = 100
-    tol = 1e-7
-    # x, k = cgls2(A, L, y, l, I_max, tol, 5, 5)
-    x1, k, q10_err = cgls(A, L, y, l, I_max, tol, 5, 5)
-    y_padded = np.concatenate([y, np.zeros(50)])
-    B = np.vstack((A, np.sqrt(l) * L))
-    Q = 2 * B.T @ B
-    x_hat, exit_code = cg(B.T @ B, B.T @ y_padded, atol=1e-5)  # scipy implementation for reference
-    show_image(x1.reshape([5, 5]))
-
-    print(f"number of iter: {k}.")
-    print("Optimal X:")
-    print(x1)
-    print("Last 10 errors:")
-    print(q10_err[-10:])
-
-
-    plt.figure()
-    plt.plot(q10_err[-15:])
-    plt.show()
-
-    # #15
-    # X_15 = np.zeros((5, 5))
-    # q15_opt_x, q15_iter, q15_err = question_15(X_15, A, y)
-    # print(f"number of iter: {q15_iter}.")
+    # question_11()
+    # A = get_A_toyExample().todense()
+    # L = np.concatenate([get_dx(5, 5).todense(), get_dy(5, 5).todense()])
+    # y = get_y_toy_problem()
+    # l = 10 ** -5
+    # I_max = 100
+    # tol = 1e-7
+    # # x, k = cgls2(A, L, y, l, I_max, tol, 5, 5)
+    # x1, k, q10_err = cgls(A, L, y, l, I_max, tol, 5, 5)
+    # y_padded = np.concatenate([y, np.zeros(50)])
+    # B = np.vstack((A, np.sqrt(l) * L))
+    # Q = 2 * B.T @ B
+    # x_hat, exit_code = cg(B.T @ B, B.T @ y_padded, atol=1e-5)  # scipy implementation for reference
+    # show_image(x1.reshape([5, 5]))
+    #
+    # print(f"number of iter: {k}.")
     # print("Optimal X:")
-    # print(q15_opt_x)
+    # print(x1)
     # print("Last 10 errors:")
-    # print(q15_err[-10:])
+    # print(q10_err[-10:])
+    #
+    #
+    # plt.figure()
+    # plt.plot(q10_err[-15:])
+    # plt.show()
+
+    #15
+    X_15 = np.zeros((5, 5))
+    q15_opt_x, q15_iter, q15_err = question_15()
+    print(f"number of iter: {q15_iter}.")
+    print("Optimal X:")
+    print(q15_opt_x)
+    print("Last 10 errors:")
+    print(q15_err[-10:])
