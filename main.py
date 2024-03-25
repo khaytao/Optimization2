@@ -9,6 +9,7 @@ from scipy.sparse.linalg import cg
 from scipy.optimize import line_search
 from tqdm import tqdm
 
+
 def show_image(x):
     plt.figure()
     plt.imshow(x, cmap="Grays")
@@ -99,35 +100,77 @@ def get_dy(m, n, dtype='<f8'):
     dy = csr_array((data, (rows, cols)), shape=(m * n, m * n), dtype=dtype)
     return dy
 
+
 err_values = []
+
+
 def cgls(A, L, y, lamda, k_max, tolerance, m, n):
-    #x = np.random.rand(m * n)  # todo think about different x0
+    # x = np.random.rand(m * n)  # todo think about different x0
     x = np.zeros(m * n)  # todo think about different x0
-    y_padded = np.concatenate([y, np.zeros(2*m * n)])
+    y_padded = np.concatenate([y, np.zeros(2 * m * n)])
     B = np.vstack((A, np.sqrt(lamda) * L))
     grad = B.T @ (B @ x - y_padded)
     g2_new = grad @ grad
     d = -grad
     # k = 0
+
     for k in tqdm(range(k_max)):
-    # while True:
-    #     k += 1
         g2_old = g2_new
         # get step size
-        ak = g2_old / (2 * d @ B.T @ B @ d)  # todo closed form step size, doesn't fit into the 1 matrix multiplication restriction
+        ak = g2_old / (
+                d @ B.T @ B @ d)  # todo closed form step size, doesn't fit into the 1 matrix multiplication restriction
         # evaluate x
+        x_old = x
         x = x + ak * d
         # evaluate distance from solution
-        error = np.linalg.norm(A @ x - y)
-        err_values.append(error)
-        if error < tolerance: #todo use formula for better evaluation
-            return x, k
+        # error = np.linalg.norm(A @ x - y)
 
         grad = B.T @ (B @ x - y_padded)
         g2_new = grad @ grad
         beta = g2_new / g2_old
         d = -grad + beta * d
+
+        # error = np.linalg.norm(x - x_old)
+        error = np.linalg.norm(grad)
+        err_values.append(error)
+        if error < tolerance:  # todo use formula for better evaluation
+            return x, k
+
     return x, k_max
+
+
+def cgls2(A, L, y, lamda, k_max, tolerance, m, n):
+    # x = np.random.rand(m * n)  # todo think about different x0
+    x = np.zeros(m * n)  # todo think about different x0
+    y_padded = np.concatenate([y, np.zeros(2 * m * n)])
+    B = np.vstack((A, np.sqrt(lamda) * L))  # Our matrix Q = B^T B
+    sk = B @ x - y_padded
+    grad = B.T @ sk
+    g2_new = grad @ grad # g2 is the power of the norm of the gradient
+    d = -grad
+
+    for k in range(k_max):
+
+        Bd = B @ d
+        g2_old = g2_new
+        # calculate step size
+        ak = g2_old / np.linalg.norm(Bd)
+        # calculate new x
+        x = x + ak * d
+        # calculate decent direction
+        sk = sk + ak * Bd
+        grad = B.T @ sk
+
+        diff = np.linalg.norm(grad)
+        err_values.append(diff)
+        if diff < tolerance:
+            return x, k
+
+        g2_new = grad @ grad
+        beta = g2_new / g2_old
+        d = -grad + beta * d
+    return x, k_max
+
 
 def question_3():
     X1 = scipy.io.loadmat("X1.mat")["X1"]
@@ -257,9 +300,15 @@ if __name__ == '__main__':
     y = get_y_toy_problem()
     l = 10 ** -5
     I_max = 100
-    tol = 0.001
-    x, k = cgls(A, L, y, l, I_max, tol, 5, 5)
+    tol = 10 ** -6
+    x, k = cgls2(A, L, y, l, I_max, tol, 5, 5)
+    #x1, k = cgls(A, L, y, l, I_max, tol, 5, 5)
     y_padded = np.concatenate([y, np.zeros(50)])
     B = np.vstack((A, np.sqrt(l) * L))
     Q = 2 * B.T @ B
-    x_hat, exit_code = cg(B.T @ B, B.T @ y_padded, atol=1e-5)
+    x_hat, exit_code = cg(B.T @ B, B.T @ y_padded, atol=1e-5)  # scipy implementation for reference
+    show_image(x.reshape([5, 5]))
+
+    plt.figure()
+    plt.plot(err_values)
+    plt.show()
