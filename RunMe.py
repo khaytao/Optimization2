@@ -10,12 +10,12 @@ from main import (
     eq_4,
     question_13,
     question_15,
+    question_16,
     get_dx,
     get_dy,
     get_A_toyExample,
     get_y_toy_problem,
     cgls,
-    show_image
 )
 
 
@@ -207,7 +207,19 @@ def q15():
 
 
 def q16():
-    print("Q16 TODO COMPLETE")
+    print("===================")
+    print("Question 16:")
+    print()
+
+    q16_opt_x, q16_iter, q16_err = question_16()
+    print(f"number of iter: {q16_iter}.")
+    print("Optimal X:")
+    print(q16_opt_x)
+    print("Last 10 errors:")
+    print(q16_err[-10:])
+
+    print()
+    print("===================")
 
 
 def main():
@@ -229,13 +241,13 @@ if len(sys.argv) > 1:
 
     flags = {
         "-q3": q3,
-        "-q4": q4,  # TODO COMPLETE
+        "-q4": q4,
         "-q9": q9,
-        "-q10": q10,  # TODO COMPLETE
-        "-q11": q11,  # TODO COMPLETE
+        "-q10": q10,
+        "-q11": q11,
         "-q13": q13,
         "-q15": q15,
-        "-q16": q16,  # TODO COMPLETE
+        "-q16": q16,
         "-main": main
     }
 
