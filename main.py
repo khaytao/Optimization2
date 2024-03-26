@@ -9,9 +9,14 @@ import math
 from scipy.sparse.linalg import cg
 from scipy.optimize import line_search
 from tqdm import tqdm
+from PIL import Image
 
 
-def show_image(x, title=""):
+
+def show_image(x, title="", save=False):
+    if save:
+        im = Image.fromarray(x)
+        im.save(title+".jpeg")
     plt.figure()
     plt.imshow(x, cmap="Grays")
     if title:
@@ -234,7 +239,7 @@ def eq_4(A, lamda, L, x, y):
     return vec.T @ vec
 
 
-def question_11(lam=1e-5, show_plots=True):
+def question_11(lam=1e-5, show_plots=True, large_data=False):
     debug = False
 
     if debug:
@@ -251,8 +256,12 @@ def question_11(lam=1e-5, show_plots=True):
         L = scipy.sparse.vstack([Dx, Dy])
 
     else:
-        y = scipy.io.loadmat("Small/y.mat")["y"]
-        A = scipy.io.loadmat("Small/A.mat")["A"]
+        if large_data:
+            y = scipy.io.loadmat("Large/y.mat")["y"]
+            A = scipy.io.loadmat("Large/A.mat")["A"]
+        else:
+            y = scipy.io.loadmat("Small/y.mat")["y"]
+            A = scipy.io.loadmat("Small/A.mat")["A"]
 
         Y = np.squeeze(y)
         x_dim = A.shape[1]
@@ -296,23 +305,12 @@ def question_13():
     f_1_X = [0, 0, 0, 0, 0.5, 1, 1, 1, 1]
     f_2_X = [0, 0.0025, 0.018, 0.1192, 0.5, 0.8808, 0.9820, 0.9975, 1]
 
-    # calculation of derivative using existing method
-    # getting dimensions
-    # m = n = int(np.sqrt(len(X)))
-    #
-    # Dx = get_dx(m, n)
+
     Dy = get_dy(len(X), 1)
-    #
-    # f_1_Dx = Dx @ f_1_X
-    # f_2_Dx = Dx @ f_2_X
+
     df_1_Dy = Dy @ f_1_X
     df_2_Dy = Dy @ f_2_X
 
-    # calculate derivative using list
-    # df_1_Dy = [x2 - x1 for x1, x2 in zip(f_1_X[:-1], f_1_X[1:])]
-    # df_2_Dy = [x2 - x1 for x1, x2 in zip(f_2_X[:-1], f_2_X[1:])]
-
-    # compute norm 1
     f_1_Dy_norm1 = np.linalg.norm(df_1_Dy, ord=1)
     f_2_Dy_norm1 = np.linalg.norm(df_2_Dy, ord=1)
 
@@ -320,13 +318,6 @@ def question_13():
     f_1_Dy_norm2 = np.linalg.norm(df_1_Dy, ord=2)
     f_2_Dy_norm2 = np.linalg.norm(df_2_Dy, ord=2)
 
-    # # printing df_Dx
-    # print("df_1_Dx:")
-    # print(df_1_Dx)
-    # print("f_2_Dx:")
-    # print(df_2_Dx)
-
-    # printing df_dy
     print("df_1_DX:")
     print(df_1_Dy)
     print("f_2_DX:")
@@ -338,7 +329,7 @@ def question_13():
     print(f" The norm 2 of f_2 is: {f_2_Dy_norm2}")
 
 
-def question_15(
+def question_toy(
     alpha: float = 1 / 2, num_iter: int = 10000, eps=1e-12, tolerance=1e-10, dtype="<f8"
 ):
 
@@ -376,10 +367,10 @@ def question_15(
     return X, num_iter, err_list
 
 
-def question_16(
-    alpha: float = 1 / 2, num_iter: int = 1000, eps=1e-12, tolerance=5e-7, dtype="<f8"
+def question_15(
+    alpha: float = 1 / 2, num_iter: int = 10000, eps=1e-12, tolerance=1e-6, dtype="<f8"
 ):
-    debug = True
+    debug = False
     y = scipy.io.loadmat("Small/y.mat")["y"]
     A = scipy.io.loadmat("Small/A.mat")["A"]
     Y = np.squeeze(y)
@@ -391,8 +382,8 @@ def question_16(
     Dz = get_dz(m, n, l)
     D = scipy.sparse.vstack([Dx, Dy, Dz])
 
-    X = np.random.rand(x_dim)
-    # X = np.zeros(x_dim)
+    ret_q11 = question_11(show_plots=False)
+    X = ret_q11["x_opt"]
 
     if debug:
         y_padded = np.concatenate([Y, np.zeros(D.shape[0])])
@@ -404,7 +395,7 @@ def question_16(
     err_list = []
     IRLS_num_iter_list = []
     X = np.squeeze(X.reshape([-1, 1]))
-    IRLS_iter = 2000
+    IRLS_iter = 10000
     IRLS_tol = 1e-6
     for k in range(num_iter):
         if debug:
@@ -419,6 +410,12 @@ def question_16(
             k_max=IRLS_iter,
             tolerance=IRLS_tol,
         )
+        obj_func_val = (1 / 2) * (IRLS_x_opt.T @ A.T @ A @ IRLS_x_opt +
+                                  alpha * IRLS_x_opt.T @ D.T @ sqrt_W @ sqrt_W @ D @ IRLS_x_opt -
+                                  IRLS_x_opt.T @ A.T @ Y -
+                                  Y.T @ A @ IRLS_x_opt.T +
+                                  Y.T @ Y)
+        print(f" Objective value in iteration {k} is: {obj_func_val}")
 
         if debug:
             # B = scipy.sparse.vstack([A, np.sqrt(alpha) *  sqrt_W @ D])
@@ -428,8 +425,6 @@ def question_16(
 
         err_list.append(IRLS_err[-1])
         IRLS_num_iter_list.append(IRLS_num_iter)
-        if k==3:
-            print("Now")
         if debug:
             X = x_hat
         else:
@@ -445,6 +440,68 @@ def question_16(
         show_image(x_opt_org[:, :, _])
 
     return X, k, err_list
+
+def question_16(
+    alpha: float = 1 / 2, num_iter: int = 10000, eps=1e-12, tolerance=1e-7, dtype="<f8"
+):
+    debug = False
+    y = scipy.io.loadmat("Large/y.mat")["y"]
+    A = scipy.io.loadmat("Large/A.mat")["A"]
+    Y = np.squeeze(y)
+    x_dim = A.shape[1]
+    m = n = l = round(x_dim ** (1 / 3))
+
+    Dx = get_dx2(m, n, l)
+    Dy = get_dy2(m, n, l)
+    Dz = get_dz(m, n, l)
+    D = scipy.sparse.vstack([Dx, Dy, Dz])
+
+    # ret_q11 = question_11(show_plots=False, large_data=True)
+    # X = ret_q11["x_opt"]
+    X = np.zeros(A.shape[1])
+
+    idx = [_ for _ in range(D.shape[0])]  # number of rows of L
+    k = num_iter
+    err_list = []
+    IRLS_num_iter_list = []
+    X = np.squeeze(X.reshape([-1, 1]))
+    IRLS_iter = 10000
+    IRLS_tol = 1e-6
+    for k in range(num_iter):
+        if debug:
+            print(f"iteration num {k}")
+        W_vals = 1 / (np.sqrt(np.absolute(D @ X)) + np.sqrt(eps))
+        sqrt_W = csr_array((W_vals, (idx, idx)), shape=(D.shape[0], D.shape[0]), dtype=dtype)
+        IRLS_x_opt, IRLS_num_iter, IRLS_err = cgls(
+            A=A.tocsr(),
+            L=(sqrt_W @ D),
+            y=Y,
+            lamda=np.sqrt(alpha),
+            k_max=IRLS_iter,
+            tolerance=IRLS_tol,
+        )
+
+        obj_func_val = (1/2) * (IRLS_x_opt.T @ A.T @ A @ IRLS_x_opt +
+                                alpha * IRLS_x_opt.T @ D.T @ sqrt_W @ sqrt_W @ D @ IRLS_x_opt -
+                                IRLS_x_opt.T @ A.T @ Y -
+                                Y.T @ A @ IRLS_x_opt.T +
+                                Y.T @ Y)
+        print(f" Objective value in iteration {k} is: {obj_func_val}")
+
+
+        err_list.append(IRLS_err[-1])
+        IRLS_num_iter_list.append(IRLS_num_iter)
+
+        X = IRLS_x_opt
+        if err_list[-1] < tolerance:
+            break
+
+    x_opt_org = X.reshape([m, n, l])
+    for _ in range(m):
+        show_image(x_opt_org[:, :, _], title=f"q16_image_{_+1}", save=True)
+
+    return X, k, err_list
+
 
 
 def get_A_toyExample():
@@ -544,11 +601,18 @@ if __name__ == '__main__':
 
     # 15
     # X_15 = np.zeros((5, 5))
+
+    # q15_opt_x, q15_iter, q15_err = question_15()
+    # print(f"number of iter: {q15_iter}.")
+    # print("Optimal X:")
+    # print(q15_opt_x)
+    # print("Last 10 errors:")
+    # print(q15_err[-10:])
     q16_opt_x, q16_iter, q16_err = question_16()
-    q15_opt_x, q15_iter, q15_err = question_15()
-    # q15_opt_x, q15_iter, q15_err = question_15_beta()
-    print(f"number of iter: {q15_iter}.")
+    print(f"number of iter: {q16_iter}.")
     print("Optimal X:")
-    print(q15_opt_x)
+    print(q16_opt_x)
     print("Last 10 errors:")
-    print(q15_err[-10:])
+    print(q16_err[-10:])
+    # q15_opt_x, q15_iter, q15_err = question_15_beta()
+
