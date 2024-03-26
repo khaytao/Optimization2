@@ -4,11 +4,16 @@ import numpy as np
 import sympy as sp
 from scipy.io import loadmat
 import matplotlib.pyplot as plt
+from scipy.sparse import csr_array, csc_array, csr_matrix, vstack
 from main import (
     question_13,
     question_15,
     get_dx,
-    get_dy
+    get_dy,
+    get_A_toyExample,
+    get_y_toy_problem,
+    cgls,
+    show_image
 )
 
 
@@ -22,7 +27,7 @@ def q3():
     print("Dy =", get_dy(5, 5))
 
     print()
-    print("===================")    
+    print("===================")
 
 
 def q4():
@@ -57,7 +62,7 @@ def q4():
         axs[1, 1].set_title('gradient_amplitude')
         axs[1, 1].axis('off')
 
-        fig.suptitle(f'Signel {i+1}', fontsize=16)
+        fig.suptitle(f'Signel {i + 1}', fontsize=16)
 
         plt.tight_layout()
         plt.show()
@@ -73,7 +78,7 @@ def q9():
             (3, 2), (3, 7), (3, 12), (3, 17), (3, 22),
             (4, 4), (4, 9), (4, 14), (4, 19), (4, 24)
         ],
-        sp.sqrt(delta_x**2 + delta_y**2): [
+        sp.sqrt(delta_x ** 2 + delta_y ** 2): [
             (2, 2), (2, 8), (2, 14), (2, 20),
             (5, 5), (5, 9), (5, 13), (5, 17), (5, 21),
             (6, 4), (6, 10),
@@ -121,8 +126,23 @@ def q9():
 
 
 def q10():
-    print("Q10 TODO COMPLETE")
-    
+    A = get_A_toyExample()
+    L = vstack([get_dx(5, 5), get_dy(5, 5)])
+    y = get_y_toy_problem()
+    l = 10 ** -5
+    I_max = 10000
+    tol = 1e-6
+    x, k, q10_err = cgls(A, L, y, l, I_max, tol, 5, 5)
+
+    plt.figure()
+    plt.plot(q10_err)
+    plt.xlabel("Number of iteration")
+    plt.ylabel("Norm of the Gradient")
+    plt.title("Algorithm Convergence per Iteration")
+    plt.show()
+
+    show_image(np.flip(x.reshape([5, 5]), axis=0))  # y-axis is flipped in order to display the y axis in the "up" direction
+
 
 def q11():
     print("Q11 TODO COMPLETE")
@@ -159,7 +179,7 @@ def q16():
 
 def main():
     """All answers to code questions."""
-    
+
     q3()
     q4()
     q9()
@@ -173,16 +193,16 @@ def main():
 # FLags definition
 if len(sys.argv) > 1:
     flag = sys.argv[1]
-    
+
     flags = {
         "-q3": q3,
-        "-q4": q4, # TODO COMPLETE
+        "-q4": q4,  # TODO COMPLETE
         "-q9": q9,
-        "-q10": q10, # TODO COMPLETE
-        "-q11": q11, # TODO COMPLETE
+        "-q10": q10,  # TODO COMPLETE
+        "-q11": q11,  # TODO COMPLETE
         "-q13": q13,
         "-q15": q15,
-        "-q16": q16, # TODO COMPLETE
+        "-q16": q16,  # TODO COMPLETE
         "-main": main
     }
 

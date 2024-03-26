@@ -144,8 +144,7 @@ def cgls(A, L, y, lamda=1e-5, k_max=300, tolerance=1e-6, m=1, n=1, l=1):
     err_values = []
 
     block_size = m * n * l
-    # x = np.random.rand(A.shape[1]  # todo think about different x0
-    x = np.zeros(A.shape[1])  # todo think about different x0
+    x = np.zeros(A.shape[1])
     y_padded = np.concatenate([y, np.zeros(L.shape[0])])
     B = scipy.sparse.vstack([A, np.sqrt(lamda) * L]) # Our matrix Q = B^T B
     sk = B @ x - y_padded
@@ -379,20 +378,21 @@ def get_y_toy_problem():
 
 
 if __name__ == '__main__':
-    question_11()
-    # A = get_A_toyExample().todense()
-    # L = np.concatenate([get_dx(5, 5).todense(), get_dy(5, 5).todense()])
-    # y = get_y_toy_problem()
-    # l = 10 ** -5
-    # I_max = 100
-    # tol = 1e-7
+    #question_11()
+    A = get_A_toyExample().todense()
+    L = np.concatenate([get_dx(5, 5).todense(), get_dy(5, 5).todense()])
+    y = get_y_toy_problem()
+    l = 10 ** -5
+    I_max = 10000
+    tol = 1e-9
     # # x, k = cgls2(A, L, y, l, I_max, tol, 5, 5)
-    # x1, k, q10_err = cgls(A, L, y, l, I_max, tol, 5, 5)
-    # y_padded = np.concatenate([y, np.zeros(50)])
-    # B = np.vstack((A, np.sqrt(l) * L))
-    # Q = 2 * B.T @ B
-    # x_hat, exit_code = cg(B.T @ B, B.T @ y_padded, atol=1e-5)  # scipy implementation for reference
-    # show_image(x1.reshape([5, 5]))
+    x1, k, q10_err = cgls(A, L, y, l, I_max, tol, 5, 5)
+    y_padded = np.concatenate([y, np.zeros(50)])
+    B = np.vstack((A, np.sqrt(l) * L))
+    Q = 2 * B.T @ B
+    x_hat, exit_code, err = cg(B.T @ B, B.T @ y_padded, atol=1e-5)  # scipy implementation for reference
+    show_image(x1.reshape([5, 5]))
+    show_image(x_hat.reshape([5, 5]))
     #
     # print(f"number of iter: {k}.")
     # print("Optimal X:")
