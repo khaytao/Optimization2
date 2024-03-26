@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.sparse import csr_array, csc_array, csr_matrix, vstack
 import sympy as sp
 import math
+
 # todo these are python implementations of the ex, for debugging
 from scipy.sparse.linalg import cg
 from scipy.optimize import line_search
@@ -16,7 +17,7 @@ def show_image(x):
     plt.show()
 
 
-def get_dx(m, n, l=1, dtype='<f8'):
+def get_dx(m, n, l=1, dtype="<f8"):
     """
     This function returns the Dx matrix such that Dx x is the column stack representation of the spacial derivative in the x direction.
     :param m:
@@ -39,12 +40,13 @@ def get_dx(m, n, l=1, dtype='<f8'):
         rows.append(j)
         cols.append(j + m)
         j += 1
-    dx = csr_array((data, (rows, cols)), shape=(m * n, m * n),
-                   dtype=dtype)  # using a sparse array as that matrix can be quite large
+    dx = csr_array(
+        (data, (rows, cols)), shape=(m * n, m * n), dtype=dtype
+    )  # using a sparse array as that matrix can be quite large
     return dx
 
 
-def get_dx2(m, n, l=1, dtype='<f8'):
+def get_dx2(m, n, l=1, dtype="<f8"):
     """
     This function returns the Dx matrix such that Dx x is the column stack representation of the spacial derivative in the x direction.
     :param m:
@@ -65,17 +67,17 @@ def get_dx2(m, n, l=1, dtype='<f8'):
             rows.append(j + (i * m * n))
             cols.append(j + (i * m * n))
             data.append(1)
-            rows.append(j+ (i * m * n))
+            rows.append(j + (i * m * n))
             cols.append(j + m + (i * m * n))
             j += 1
         i += 1
-    # dx = csr_array((data, (rows, cols)), shape=(m * n * l, m * n * l),
-    #                dtype=dtype)  # using a sparse array as that matrix can be quite large
-    dx = csr_matrix((data, (rows, cols)), shape=(m * n * l, m * n * l),
-                   dtype=dtype)  # using a sparse array as that matrix can be quite large
+    dx = csr_matrix(
+        (data, (rows, cols)), shape=(m * n * l, m * n * l), dtype=dtype
+    )  # using a sparse array as that matrix can be quite large
     return dx
 
-def get_dy(m, n, l=1, dtype='<f8'):
+
+def get_dy(m, n, l=1, dtype="<f8"):
     """
     this function returns the dy matrix such that Dy x is the column stack representation of the spacial derivative in the y direction
     :param m:
@@ -104,7 +106,8 @@ def get_dy(m, n, l=1, dtype='<f8'):
     dy = csr_array((data, (rows, cols)), shape=(m * n, m * n), dtype=dtype)
     return dy
 
-def get_dy2(m, n, l=1, dtype='<f8'):
+
+def get_dy2(m, n, l=1, dtype="<f8"):
     """
     this function returns the dy matrix such that Dy x is the column stack representation of the spacial derivative in the y direction
     :param m:
@@ -132,47 +135,47 @@ def get_dy2(m, n, l=1, dtype='<f8'):
             cols.append(index + 1 + (i * m * n))
             j += 1
         i += 1
-    # dy = csr_array((data, (rows, cols)), shape=(m * n * l, m * n * l), dtype=dtype)
     dy = csr_matrix((data, (rows, cols)), shape=(m * n * l, m * n * l), dtype=dtype)
     return dy
 
-def get_dz(m, n, l=1, dtype='<f8'):
-    return get_dx2(m*n,l, 1)
+
+def get_dz(m, n, l=1, dtype="<f8"):
+    return get_dx2(m * n, l, 1)
 
 
-def cgls(A, L, y, lamda=1e-5, k_max=300, tolerance=1e-6, m=1, n=1, l=1):
+def cgls(A, L, y, lamda=1e-5, k_max=300, tolerance=1e-6):
     err_values = []
 
-    block_size = m * n * l
-    # x = np.random.rand(A.shape[1]  # todo think about different x0
+    # x = np.random.rand(A.shape[1])  # todo think about different x0
     x = np.zeros(A.shape[1])  # todo think about different x0
     y_padded = np.concatenate([y, np.zeros(L.shape[0])])
-    B = scipy.sparse.vstack([A, np.sqrt(lamda) * L]) # Our matrix Q = B^T B
+    B = scipy.sparse.vstack([A, np.sqrt(lamda) * L])  # Our matrix Q = B^T B
     sk = B @ x - y_padded
-    grad = B.T @ sk
-    g2_new = grad @ grad  # g2 is the power of the norm of the gradient
-    d = -grad
+    grad_new = B.T @ sk
+    g2_new = grad_new @ grad_new  # g2 is the power of the norm of the gradient
+    d = -grad_new
 
     for k in range(k_max):
 
+        grad_old = grad_new
         Bd = B @ d
         g2_old = g2_new
         # calculate step size
-        ak = g2_old / (np.linalg.norm(Bd, ord=2)**2)
+        ak = g2_old / (np.linalg.norm(Bd, ord=2) ** 2)
         # calculate new x
         x = x + ak * d
         # calculate decent direction - new point
         sk = sk + ak * Bd
-        grad = B.T @ sk
+        grad_new = B.T @ sk
 
-        diff = np.linalg.norm(grad, ord=2)
+        diff = np.linalg.norm(grad_new, ord=2)
         err_values.append(diff)
         if diff < tolerance:
             return x, k, err_values
 
-        g2_new = grad @ grad
-        beta = g2_new / g2_old
-        d = -grad + beta * d
+        g2_new = grad_new @ grad_new
+        beta = (g2_new - grad_new.T @ grad_old)/ g2_old
+        d = -grad_new + beta * d
     return x, k_max, err_values
 
 
@@ -193,51 +196,64 @@ def question_3():
     dx = Dx @ X.reshape([-1, 1])
     dy = Dy @ X.reshape([-1, 1])
 
-    gradient_amplitude = np.sqrt(dx ** 2 + dy ** 2)
+    gradient_amplitude = np.sqrt(dx**2 + dy**2)
 
     fig, axs = plt.subplots(2, 2)
 
     axs[0, 0].imshow(X, cmap="Grays")
-    axs[0, 0].set_title('Source Signal')
-    axs[0, 0].axis('off')  # Remove axis ticks and labels
+    axs[0, 0].set_title("Source Signal")
+    axs[0, 0].axis("off")  # Remove axis ticks and labels
 
     axs[0, 1].imshow(dx.reshape([m, n]), cmap="Grays")
-    axs[0, 1].set_title('x-direction partial derivative')
-    axs[0, 1].axis('off')
+    axs[0, 1].set_title("x-direction partial derivative")
+    axs[0, 1].axis("off")
 
     axs[1, 0].imshow(dy.reshape([m, n]), cmap="Grays")
-    axs[1, 0].set_title('y-direction partial derivative')
-    axs[1, 0].axis('off')
+    axs[1, 0].set_title("y-direction partial derivative")
+    axs[1, 0].axis("off")
 
     axs[1, 1].imshow(gradient_amplitude.reshape([m, n]), cmap="Grays")
-    axs[1, 1].set_title('gradient_amplitude')
-    axs[1, 1].axis('off')
+    axs[1, 1].set_title("gradient_amplitude")
+    axs[1, 1].axis("off")
 
     plt.show()
 
+
 def question_11():
-    y = scipy.io.loadmat("Small/y.mat")["y"]
-    A = scipy.io.loadmat("Small/A.mat")["A"]
+    debug = False
 
-    Y = np.squeeze(y)
-    x_dim = A.shape[1]
-    m = n = l = round(x_dim ** (1/3))
-
-    Dx = get_dx2(m, n, l)
-    Dy = get_dy2(m, n, l)
-    Dz = get_dz(m, n, l)
-
-    # L = np.vstack((Dx, Dy, Dz))
-    L = scipy.sparse.vstack([Dx, Dy, Dz])
+    if debug:
+        A = get_A_toyExample()
+        Y = get_y_toy_problem()
+        x_dim = A.shape[1]
+        m = n = round(x_dim ** (1 / 2))
+        l = 1
+        Dx = get_dx(
+            m,
+            n,
+        )
+        Dy = get_dy(m, n)
+        L = scipy.sparse.vstack([Dx, Dy])
+    else:
+        y = scipy.io.loadmat("Small/y.mat")["y"]
+        A = scipy.io.loadmat("Small/A.mat")["A"]
+        x_dim = A.shape[1]
+        m = n = l = round(x_dim ** (1 / 3))
+        Dx = get_dx2(m, n, l)
+        Dy = get_dy2(m, n, l)
+        Dz = get_dz(m, n, l)
+        L = scipy.sparse.vstack([Dx, Dy, Dz])
+        Y = np.squeeze(y)
 
     tol = 1e-6
     lam = 1e-5
     I_max = 10000
 
-    x_opt, num_iter, err = cgls(A.tocsr(), L, Y, lam, I_max, tol, m, n, l)
+    x_opt, num_iter, err = cgls(A.tocsr(), L, Y, lam, I_max, tol)
     x_opt_org = x_opt.reshape([m, n, l])
-    for _ in range(m):
-        show_image(x_opt_org[:, :, _])
+    # for _ in range(m):
+        # if not debug:
+            # show_image(x_opt_org[:, :, _])
 
     return
 
@@ -293,68 +309,133 @@ def question_13():
     print(f" The norm 2 of f_2 is: {f_2_Dy_norm2}")
 
 
-def question_15(alpha: float = 1/2, num_iter: int = 1000, eps=1e-10, tolerance=1e-7, dtype='<f8'):
+def question_15(
+    alpha: float = 1 / 2, num_iter: int = 10000, eps=1e-12, tolerance=1e-10, dtype="<f8"
+):
 
     A = get_A_toyExample()
     Y = get_y_toy_problem()
 
-    X = np.zeros(5 * 5)
+    x_dim = A.shape[1]
+    X = np.random.rand(x_dim)
+    # X = np.zeros(x_dim)
+    m = n = round(x_dim ** (1 / 2))
 
-    m = n = 5
-    L = get_dy(m, n)
+    Dx = get_dx(m, n)
+    Dy = get_dy(m, n)
+    D = scipy.sparse.vstack([Dx, Dy])
 
-    idx = [_ for _ in range(m*n)]
-
+    idx = [_ for _ in range(D.shape[0])]  # number of rows of L
     k = num_iter
-    err = []
+    err_list = []
 
     X = np.squeeze(X.reshape([-1, 1]))
+    IRLS_iter = 10000
+    IRLS_tol = 1e-6
     while k:
-        W_vals = 1 / (np.absolute(L.T @ X) + eps)
-        W = csr_array((W_vals, (idx, idx)), shape=(m * n, m * n), dtype=dtype)
+        W_vals = 1 / (np.absolute(D @ X) + eps)
+        W = csr_array((W_vals, (idx, idx)), shape=(D.shape[0], D.shape[0]), dtype=dtype)
+        IRLS_x_opt, IRLS_num_iter, IRLS_err = cgls(
+            A.tocsr(), (W @ D), Y, np.sqrt(alpha), IRLS_iter, IRLS_tol
+        )
+        err_list.append(IRLS_err[-1])
+        X = IRLS_x_opt
+        if err_list[-1] < tolerance:
+            return X, num_iter - k, err_list
+        k = k - 1
 
-        y_padded = np.concatenate([Y, np.zeros(m * n)])
-        B = np.vstack((A.toarray(), np.sqrt(alpha) * (W @ L).toarray()))
-        grad = B.T @ (B @ X - y_padded)
-        g2_new = grad @ grad
-        d = -grad
+    return X, num_iter, err_list
 
-        g2_old = g2_new
-        # get step size
-        ak = g2_old / (
-                2 * d @ B.T @ B @ d)  # todo closed form step size, doesn't fit into the 1 matrix multiplication restriction
-        # evaluate x
-        X = X + ak * d
-        # evaluate distance from solution
-        error = np.linalg.norm(A @ X - Y)
-        err.append(error)
-        if len(err) > 2:
-            if (error - err[-2]) < tolerance:  # todo use formula for better evaluation
-                return X, num_iter-k, err
 
-        grad = B.T @ (B @ X - y_padded)
-        g2_new = grad @ grad
-        beta = g2_new / g2_old
-        d = -grad + beta * d
-        k = k-1
+def question_16(
+    alpha: float = 1 / 2, num_iter: int = 2000, eps=1e-12, tolerance=5e-7, dtype="<f8"
+):
 
-    return X, num_iter, err
+    y = scipy.io.loadmat("Small/y.mat")["y"]
+    A = scipy.io.loadmat("Small/A.mat")["A"]
+    Y = np.squeeze(y)
+    x_dim = A.shape[1]
+    m = n = l = round(x_dim ** (1 / 3))
+
+    Dx = get_dx2(m, n, l)
+    Dy = get_dy2(m, n, l)
+    Dz = get_dz(m, n, l)
+    D = scipy.sparse.vstack([Dx, Dy, Dz])
+
+    X = np.random.rand(x_dim)
+    # X = np.zeros(x_dim)
+
+    idx = [_ for _ in range(D.shape[0])]  # number of rows of L
+    k = num_iter
+    err_list = []
+    IRLS_num_iter_list = []
+    X = np.squeeze(X.reshape([-1, 1]))
+    IRLS_iter = 2000
+    IRLS_tol = 1e-6
+    for k in range(num_iter):
+        W_vals = 1 / (np.absolute(D @ X) + eps)
+        W = csr_array((W_vals, (idx, idx)), shape=(D.shape[0], D.shape[0]), dtype=dtype)
+        IRLS_x_opt, IRLS_num_iter, IRLS_err = cgls(
+            A=A.tocsr(),
+            L=(W @ D),
+            y=Y,
+            lamda=np.sqrt(alpha),
+            k_max=IRLS_iter,
+            tolerance=IRLS_tol,
+        )
+
+        err_list.append(IRLS_err[-1])
+        IRLS_num_iter_list.append(IRLS_num_iter)
+        X = IRLS_x_opt
+        if err_list[-1] < tolerance:
+            break
+
+    x_opt_org = X.reshape([m, n, l])
+    for _ in range(m):
+        show_image(x_opt_org[:, :, _])
+
+    return X, k, err_list
+
 
 def get_A_toyExample():
     values = []
     rows = []
     cols = []
-    delta_x = [(1, 1), (1, 6), (1, 11), (1, 16), (1, 21), (3, 2), (3, 7), (3, 12), (3, 17), (3, 22), (4, 4), (4, 9),
-               (4, 14), (4, 19), (4, 24)]
+    delta_x = [
+        (1, 1),
+        (1, 6),
+        (1, 11),
+        (1, 16),
+        (1, 21),
+        (3, 2),
+        (3, 7),
+        (3, 12),
+        (3, 17),
+        (3, 22),
+        (4, 4),
+        (4, 9),
+        (4, 14),
+        (4, 19),
+        (4, 24),
+    ]
     diag = [
-        (2, 2), (2, 8), (2, 14), (2, 20),
-        (5, 5), (5, 9), (5, 13), (5, 17), (5, 21),
-        (6, 4), (6, 10),
-        (8, 2), (8, 8), (8, 14), (8, 20)
+        (2, 2),
+        (2, 8),
+        (2, 14),
+        (2, 20),
+        (5, 5),
+        (5, 9),
+        (5, 13),
+        (5, 17),
+        (5, 21),
+        (6, 4),
+        (6, 10),
+        (8, 2),
+        (8, 8),
+        (8, 14),
+        (8, 20),
     ]
-    delta_y = [
-        (7, 16), (7, 17), (7, 18), (7, 19), (7, 20)
-    ]
+    delta_y = [(7, 16), (7, 17), (7, 18), (7, 19), (7, 20)]
 
     for pair in delta_x:
         values.append(1)
@@ -375,10 +456,11 @@ def get_y_toy_problem():
     Y = scipy.io.loadmat("Y.mat")["Y"]
     y_flat = np.array(Y.todense().flatten())
     return y_flat[
-        y_flat != 0].flatten()  # we have defined A in a way that y is ordered correctly. All that's needed is to flatten and take the nonzero elements
+        y_flat != 0
+    ].flatten()  # we have defined A in a way that y is ordered correctly. All that's needed is to flatten and take the nonzero elements
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     question_11()
     # A = get_A_toyExample().todense()
     # L = np.concatenate([get_dx(5, 5).todense(), get_dy(5, 5).todense()])
@@ -405,11 +487,13 @@ if __name__ == '__main__':
     # plt.plot(q10_err[-15:])
     # plt.show()
 
-    # #15
+    # 15
     # X_15 = np.zeros((5, 5))
-    # q15_opt_x, q15_iter, q15_err = question_15()
-    # print(f"number of iter: {q15_iter}.")
-    # print("Optimal X:")
-    # print(q15_opt_x)
-    # print("Last 10 errors:")
-    # print(q15_err[-10:])
+    q16_opt_x, q16_iter, q16_err = question_16()
+    q15_opt_x, q15_iter, q15_err = question_15()
+    # q15_opt_x, q15_iter, q15_err = question_15_beta()
+    print(f"number of iter: {q15_iter}.")
+    print("Optimal X:")
+    print(q15_opt_x)
+    print("Last 10 errors:")
+    print(q15_err[-10:])
