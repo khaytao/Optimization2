@@ -1,2 +1,6 @@
 *.zip
 *.pdf
+Small/
+Large/
+draft_q9.ipynb
+__pycache__/

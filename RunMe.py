@@ -132,8 +132,13 @@ def q10():
     l = 10 ** -5
     I_max = 10000
     tol = 1e-6
-    x, k, q10_err = cgls(A, L, y, l, I_max, tol, 5, 5)
+    x, k, q10_err = cgls(A, L, y, l, I_max, tol)
 
+    # compare our results to scipy's implementation
+    from scipy.sparse.linalg import cg  # I import here to emphasize we only use it for comparison
+    y_padded = np.concatenate([y, np.zeros(50)])
+    B = vstack((A, np.sqrt(l) * L))
+    x_hat, exit_code = cg(B.T @ B, B.T @ y_padded, maxiter=I_max, atol=tol, rtol=0)
     plt.figure()
     plt.plot(q10_err)
     plt.xlabel("Number of iteration")
@@ -141,8 +146,15 @@ def q10():
     plt.title("Algorithm Convergence per Iteration")
     plt.show()
 
-    show_image(np.flip(x.reshape([5, 5]), axis=0))  # y-axis is flipped in order to display the y axis in the "up" direction
+    fig, ax = plt.subplots(1, 2)
 
+    ax[0].imshow(x.reshape([5, 5]), cmap="Grays")
+    ax[0].set_title('CGLS output, our implementation')
+    ax[1].imshow(x_hat.reshape([5, 5]), cmap="Grays")
+    ax[1].set_title('CGLS output, Scipy')
+
+    plt.tight_layout()
+    plt.show()
 
 def q11():
     print("Q11 TODO COMPLETE")
