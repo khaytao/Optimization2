@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import sympy as sp
 from scipy.io import loadmat
-
+import matplotlib.pyplot as plt
 from main import (
     question_13,
     question_15,
@@ -26,11 +26,45 @@ def q3():
 
 
 def q4():
-    print("Q4 TODO COMPLETE")
+    X1 = loadmat("X1.mat")["X1"]
+    X2 = loadmat("X2.mat")["X2"]
+    X3 = loadmat("X3.mat")["X3"]
+    for i, X in enumerate([X1, X2, X3]):
+        m, n = X.shape
+        Dy = get_dy(m, n)
+        Dx = get_dx(m, n)
+
+        dx = Dx @ X.reshape([-1, 1])
+        dy = Dy @ X.reshape([-1, 1])
+
+        gradient_amplitude = np.sqrt(dx ** 2 + dy ** 2)
+
+        fig, axs = plt.subplots(2, 2)
+
+        axs[0, 0].imshow(X, cmap="Grays")
+        axs[0, 0].set_title('Source Signal')
+        axs[0, 0].axis('off')  # Remove axis ticks and labels
+
+        axs[0, 1].imshow(dx.reshape([m, n]), cmap="Grays")
+        axs[0, 1].set_title('x-direction partial derivative')
+        axs[0, 1].axis('off')
+
+        axs[1, 0].imshow(dy.reshape([m, n]), cmap="Grays")
+        axs[1, 0].set_title('y-direction partial derivative')
+        axs[1, 0].axis('off')
+
+        axs[1, 1].imshow(gradient_amplitude.reshape([m, n]), cmap="Grays")
+        axs[1, 1].set_title('gradient_amplitude')
+        axs[1, 1].axis('off')
+
+        fig.suptitle(f'Signel {i+1}', fontsize=16)
+
+        plt.tight_layout()
+        plt.show()
 
 
 def q9():
-    delta_x, delta_y = sp.symbols("\Delta\\tilde{x} \Delta\\tilde{y}")
+    delta_x, delta_y = sp.symbols(r"\Delta\\tilde{x} \Delta\\tilde{y}")
     A = sp.zeros(8, 25)
 
     non_zeros = {
