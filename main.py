@@ -158,8 +158,9 @@ def cgls(A, L, y, lamda=1e-5, k_max=300, tolerance=1e-6):
     for k in range(k_max):
 
         grad_old = grad_new
-        Bd = B @ d
         g2_old = g2_new
+        Bd = B @ d
+
         # calculate step size
         ak = g2_old / (np.linalg.norm(Bd, ord=2) ** 2)
         # calculate new x
@@ -348,9 +349,9 @@ def question_15(
 
 
 def question_16(
-    alpha: float = 1 / 2, num_iter: int = 2000, eps=1e-12, tolerance=5e-7, dtype="<f8"
+    alpha: float = 1 / 2, num_iter: int = 1000, eps=1e-12, tolerance=5e-7, dtype="<f8"
 ):
-
+    debug = True
     y = scipy.io.loadmat("Small/y.mat")["y"]
     A = scipy.io.loadmat("Small/A.mat")["A"]
     Y = np.squeeze(y)
@@ -365,6 +366,11 @@ def question_16(
     X = np.random.rand(x_dim)
     # X = np.zeros(x_dim)
 
+    if debug:
+        y_padded = np.concatenate([Y, np.zeros(D.shape[0])])
+        debug_diff = []
+
+
     idx = [_ for _ in range(D.shape[0])]  # number of rows of L
     k = num_iter
     err_list = []
@@ -373,24 +379,40 @@ def question_16(
     IRLS_iter = 2000
     IRLS_tol = 1e-6
     for k in range(num_iter):
-        W_vals = 1 / (np.absolute(D @ X) + eps)
-        W = csr_array((W_vals, (idx, idx)), shape=(D.shape[0], D.shape[0]), dtype=dtype)
+        if debug:
+            print(f"iteration num {k}")
+        W_vals = 1 / (np.sqrt(np.absolute(D @ X)) + np.sqrt(eps))
+        sqrt_W = csr_array((W_vals, (idx, idx)), shape=(D.shape[0], D.shape[0]), dtype=dtype)
         IRLS_x_opt, IRLS_num_iter, IRLS_err = cgls(
             A=A.tocsr(),
-            L=(W @ D),
+            L=(sqrt_W @ D),
             y=Y,
             lamda=np.sqrt(alpha),
             k_max=IRLS_iter,
             tolerance=IRLS_tol,
         )
 
+        if debug:
+            # B = scipy.sparse.vstack([A, np.sqrt(alpha) *  sqrt_W @ D])
+            Q = (A.T @ A + alpha * D.T @ sqrt_W @ sqrt_W @ D)
+            x_hat, exit_code = cg(A.T @ A + alpha * D.T @ sqrt_W @ sqrt_W @ D, A.T @ Y, maxiter=IRLS_iter, atol=IRLS_tol, rtol=0)
+            debug_diff.append(np.linalg.norm(x_hat-IRLS_x_opt)/np.linalg.norm(x_hat))
+
         err_list.append(IRLS_err[-1])
         IRLS_num_iter_list.append(IRLS_num_iter)
-        X = IRLS_x_opt
+        if k==3:
+            print("Now")
+        if debug:
+            X = x_hat
+        else:
+            X = IRLS_x_opt
         if err_list[-1] < tolerance:
             break
 
     x_opt_org = X.reshape([m, n, l])
+    if debug:
+        plt.figure()
+        plt.plot(debug_diff)
     for _ in range(m):
         show_image(x_opt_org[:, :, _])
 
@@ -460,24 +482,26 @@ def get_y_toy_problem():
     ].flatten()  # we have defined A in a way that y is ordered correctly. All that's needed is to flatten and take the nonzero elements
 
 
+
 if __name__ == '__main__':
     #question_11()
-    A = get_A_toyExample().todense()
-    L = np.concatenate([get_dx(5, 5).todense(), get_dy(5, 5).todense()])
-    y = get_y_toy_problem()
-    l = 10 ** -5
-    I_max = 10000
-    tol = 1e-9
+    # A = get_A_toyExample().todense()
+    # L = np.concatenate([get_dx(5, 5).todense(), get_dy(5, 5).todense()])
+    # y = get_y_toy_problem()
+    # l = 10 ** -5
+    # I_max = 10000
+    # tol = 1e-9
+    #
+    # # # x, k = cgls2(A, L, y, l, I_max, tol, 5, 5)
+    # x1, k, q10_err = cgls(A, L, y, l, I_max, tol)
+    # y_padded = np.concatenate([y, np.zeros(50)])
+    # B = np.vstack((A, np.sqrt(l) * L))
+    # Q = 2 * B.T @ B
+    # #x_hat, exit_code, err = cg(B.T @ B, B.T @ y_padded, atol=1e-5)  # scipy implementation for reference
+    # x_hat, exit_code = cg(B.T @ B, B.T @ y_padded, maxiter=I_max,atol=tol, rtol=0)
+    # show_image(x1.reshape([5, 5]))
+    # show_image(x_hat.reshape([5, 5]))
 
-    # # x, k = cgls2(A, L, y, l, I_max, tol, 5, 5)
-    x1, k, q10_err = cgls(A, L, y, l, I_max, tol)
-    y_padded = np.concatenate([y, np.zeros(50)])
-    B = np.vstack((A, np.sqrt(l) * L))
-    Q = 2 * B.T @ B
-    #x_hat, exit_code, err = cg(B.T @ B, B.T @ y_padded, atol=1e-5)  # scipy implementation for reference
-    x_hat, exit_code = cg(B.T @ B, B.T @ y_padded, maxiter=I_max,atol=tol, rtol=0)
-    show_image(x1.reshape([5, 5]))
-    show_image(x_hat.reshape([5, 5]))
     #
     # print(f"number of iter: {k}.")
     # print("Optimal X:")
