@@ -5,10 +5,8 @@ from scipy.sparse import csr_array, csc_array, csr_matrix, vstack
 import sympy as sp
 import math
 
-# todo these are python implementations of the ex, for debugging
+
 from scipy.sparse.linalg import cg
-from scipy.optimize import line_search
-from tqdm import tqdm
 from PIL import Image
 
 
@@ -565,54 +563,3 @@ def get_y_toy_problem():
     return y_flat[
         y_flat != 0
     ].flatten()  # we have defined A in a way that y is ordered correctly. All that's needed is to flatten and take the nonzero elements
-
-
-
-if __name__ == '__main__':
-    #question_11()
-    # A = get_A_toyExample().todense()
-    # L = np.concatenate([get_dx(5, 5).todense(), get_dy(5, 5).todense()])
-    # y = get_y_toy_problem()
-    # l = 10 ** -5
-    # I_max = 10000
-    # tol = 1e-9
-    #
-    # # # x, k = cgls2(A, L, y, l, I_max, tol, 5, 5)
-    # x1, k, q10_err = cgls(A, L, y, l, I_max, tol)
-    # y_padded = np.concatenate([y, np.zeros(50)])
-    # B = np.vstack((A, np.sqrt(l) * L))
-    # Q = 2 * B.T @ B
-    # #x_hat, exit_code, err = cg(B.T @ B, B.T @ y_padded, atol=1e-5)  # scipy implementation for reference
-    # x_hat, exit_code = cg(B.T @ B, B.T @ y_padded, maxiter=I_max,atol=tol, rtol=0)
-    # show_image(x1.reshape([5, 5]))
-    # show_image(x_hat.reshape([5, 5]))
-
-    #
-    # print(f"number of iter: {k}.")
-    # print("Optimal X:")
-    # print(x1)
-    # print("Last 10 errors:")
-    # print(q10_err[-10:])
-    #
-    #
-    # plt.figure()
-    # plt.plot(q10_err[-15:])
-    # plt.show()
-
-    # 15
-    # X_15 = np.zeros((5, 5))
-
-    # q15_opt_x, q15_iter, q15_err = question_15()
-    # print(f"number of iter: {q15_iter}.")
-    # print("Optimal X:")
-    # print(q15_opt_x)
-    # print("Last 10 errors:")
-    # print(q15_err[-10:])
-    q16_opt_x, q16_iter, q16_err = question_16()
-    print(f"number of iter: {q16_iter}.")
-    print("Optimal X:")
-    print(q16_opt_x)
-    print("Last 10 errors:")
-    print(q16_err[-10:])
-    # q15_opt_x, q15_iter, q15_err = question_15_beta()
-
