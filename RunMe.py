@@ -6,6 +6,8 @@ from scipy.io import loadmat
 import matplotlib.pyplot as plt
 from scipy.sparse import csr_array, csc_array, csr_matrix, vstack
 from main import (
+    question_11,
+    eq_4,
     question_13,
     question_15,
     get_dx,
@@ -157,7 +159,26 @@ def q10():
     plt.show()
 
 def q11():
-    print("Q11 TODO COMPLETE")
+    print("===================")
+    print("Question 11:")
+    print()
+
+    for lamda in [10**power for power in range(-7, 8)]:
+    
+        q11_data_dict = question_11(lamda, show_plots=False)
+
+        obj_value = eq_4(
+            A=q11_data_dict["A"],
+            lamda=q11_data_dict["lamda"],
+            L=q11_data_dict["L"],
+            x=q11_data_dict["x_opt"], 
+            y=q11_data_dict["y"]
+        )
+
+        print(f"For lambda={lamda}, objective_value = {obj_value}")
+
+    print()
+    print("===================")
 
 
 def q13():

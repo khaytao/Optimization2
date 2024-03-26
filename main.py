@@ -219,7 +219,7 @@ def question_3():
     plt.show()
 
 
-def question_11():
+def question_11(lam=1e-5, show_plots=True):
     debug = False
 
     if debug:
@@ -234,28 +234,56 @@ def question_11():
         )
         Dy = get_dy(m, n)
         L = scipy.sparse.vstack([Dx, Dy])
+        
     else:
         y = scipy.io.loadmat("Small/y.mat")["y"]
         A = scipy.io.loadmat("Small/A.mat")["A"]
+        
+        Y = np.squeeze(y)
         x_dim = A.shape[1]
         m = n = l = round(x_dim ** (1 / 3))
+        
         Dx = get_dx2(m, n, l)
         Dy = get_dy2(m, n, l)
         Dz = get_dz(m, n, l)
+        
         L = scipy.sparse.vstack([Dx, Dy, Dz])
-        Y = np.squeeze(y)
-
+        
     tol = 1e-6
-    lam = 1e-5
     I_max = 10000
 
     x_opt, num_iter, err = cgls(A.tocsr(), L, Y, lam, I_max, tol)
     x_opt_org = x_opt.reshape([m, n, l])
-    # for _ in range(m):
-        # if not debug:
-            # show_image(x_opt_org[:, :, _])
 
-    return
+    if show_plots:
+        for _ in range(m):
+            if not debug:
+                show_image(x_opt_org[:, :, _])
+
+    return {
+        "x_opt": x_opt,
+        "x_opt_org": x_opt_org,
+        "num_iter": num_iter,
+        "err": err,
+        "L": L,
+        "A": A,
+        "y": Y,
+        "lamda": lam
+    }
+
+
+def eq_4(A, lamda, L, x, y):
+    """Implementation of equation 4 from the project document."""
+    
+    first_term = scipy.sparse.vstack([A, np.sqrt(lamda) * L]) @ x
+    
+    zeros_dim = first_term.shape[0] - y.shape[0]
+
+    second_term = np.hstack((y, np.zeros(zeros_dim)))
+    
+    vec = first_term - second_term
+    
+    return vec.T @ vec
 
 
 def question_13():
