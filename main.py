@@ -1,7 +1,7 @@
 import scipy
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.sparse import csr_array, csc_array, csr_matrix
+from scipy.sparse import csr_array, csc_array, csr_matrix, vstack
 import sympy as sp
 import math
 # todo these are python implementations of the ex, for debugging
@@ -143,13 +143,14 @@ def get_dz(m, n, l=1, dtype='<f8'):
 def cgls(A, L, y, lamda=1e-5, k_max=300, tolerance=1e-6, m=1, n=1, l=1):
     err_values = []
 
-    # x = np.random.rand(m * n)  # todo think about different x0
-    x = np.zeros(m * n * l * (L.size+1))  # todo think about different x0
-    y_padded = np.concatenate([y, np.zeros(m * n * l * L.size)])
-    B = np.vstack((A, np.sqrt(lamda) * L[0], np.sqrt(lamda) * L[1], np.sqrt(lamda) * L[2]))  # Our matrix Q = B^T B
+    block_size = m * n * l
+    # x = np.random.rand(A.shape[1]  # todo think about different x0
+    x = np.zeros(A.shape[1])  # todo think about different x0
+    y_padded = np.concatenate([y, np.zeros(L.shape[0])])
+    B = scipy.sparse.vstack([A, np.sqrt(lamda) * L]) # Our matrix Q = B^T B
     sk = B @ x - y_padded
     grad = B.T @ sk
-    g2_new = grad @ grad # g2 is the power of the norm of the gradient
+    g2_new = grad @ grad  # g2 is the power of the norm of the gradient
     d = -grad
 
     for k in range(k_max):
@@ -226,16 +227,19 @@ def question_11():
     Dy = get_dy2(m, n, l)
     Dz = get_dz(m, n, l)
 
-    L = np.vstack((Dx, Dy, Dz))
+    # L = np.vstack((Dx, Dy, Dz))
+    L = scipy.sparse.vstack([Dx, Dy, Dz])
 
     tol = 1e-6
     lam = 1e-5
-    I_max = 100
+    I_max = 10000
 
     x_opt, num_iter, err = cgls(A.tocsr(), L, Y, lam, I_max, tol, m, n, l)
     x_opt_org = x_opt.reshape([m, n, l])
     for _ in range(m):
-        show_image(x_opt_org[_])
+        show_image(x_opt_org[:, :, _])
+
+    return
 
 
 def question_13():
